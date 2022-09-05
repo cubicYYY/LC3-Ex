@@ -1,0 +1,147 @@
+.orig x3000
+set R6 xFDFF
+; R0 return value
+; R1 charPointer
+; R2 targetState
+; R3 char
+; R4 tmp
+; R5 currentState
+; R6/R7 reserved
+set R4 #0
+GETN trap x20
+out
+ld R3 negChNine
+add R0 R0 R3
+BRp GETN_DONE
+add R0 R0 #9
+BRn GETN_DONE
+set R3 #0
+add R3 R4 R4 ; r3=2r4
+add R3 R3 R3 ; r3=4r4
+add R3 R3 R4 ; r3=5r4
+add R4 R3 R3 ; r4'=10r4
+add R4 R4 R0 ; r4'=10r4+in
+BR GETN
+GETN_DONE ; input n->R4
+set R2 #1
+shl R2 R4
+shl R2 #1
+add R2 R2 #-2
+; for example, when n=1, R2=b10
+; when n=2, R2=b110
+; when n=5, R2=b111110
+; get nums
+
+add R4 R4 R4 ; 2n numbers
+lea R1, nums
+inputNums
+    set R5 #0
+    NUM trap x20
+    out
+    ld R3 negChNine
+    add R0 R0 R3
+    BRp NUM_DONE
+    add R0 R0 #9
+    BRn NUM_DONE
+    set R3 #0
+    add R3 R5 R5 ; r3=2R5
+    add R3 R3 R3 ; r3=4R5
+    add R3 R3 R5 ; r3=5R5
+    add R5 R3 R3 ; R5'=10R5
+    add R5 R5 R0 ; R5'=10R5+in
+    BR NUM
+    NUM_DONE
+add R1 R1 #-1
+str R5 R1 #0
+add R4 R4 #-1
+BRp inputNums
+set r5 #0
+jsr DFS
+halt
+negChNine .fill #-57
+DFS push R7
+    push R3
+    push R4
+    push R1
+    not R4 R5
+    and R4 R4 R2
+    BRnp START; check if state=b11...11110
+    set r0 #0
+    pop R1
+    pop R4
+    pop R3
+    pop R7
+    ret
+    
+    START ldr R3 R1 #0;getnum1->R3
+    set R4 #1
+    shl R4 R3
+    st R4, save
+    and R4 R5 R4
+    BRnp IGNORE_1
+    ld R4, save
+    add R5 R5 R4 ;mask
+    add R1 R1 #2
+    jsr DFS
+    add R1 R1 #-2
+    not R4 R4
+    and R5 R5 R4 ;mask recover
+    test r0
+    BRz SUCCESS
+    IGNORE_1
+    
+    
+    ldr R3 R1 #1;getnum2->R3
+    set R4 #1
+    shl R4 R3
+    st R4, save
+    and R4 R5 R4
+    BRnp IGNORE_2
+    ld R4, save
+    add R5 R5 R4 ;mask
+    add R1 R1 #2
+    jsr DFS
+    not R4 R4
+    and R5 R5 R4 ;mask recover
+    test r0
+    BRz SUCCESS
+    IGNORE_2
+    
+    FAIL set r0 #1
+    pop R1
+    pop R4
+    pop R3
+    pop R7
+    ret
+    SUCCESS mov r0 r3
+    add r0 r0 #-10
+    BRzp TWO_DIGITS ; >=10
+    add r0 r0 #10
+
+    add r0 r0 #15
+    add r0 r0 #15
+    add r0 r0 #15
+    add r0 r0 #3 ; r0+='0'
+    out
+    BR SPACING
+    TWO_DIGITS
+    set r0 #49 ; '1'
+    out
+    mov r0 r3
+    add r0 r0 #15
+    add r0 r0 #15
+    add r0 r0 #8 ; r0 = r0 - 10 + 48
+    out
+    SPACING set r0 #32 ; ' '
+    out 
+    set r0 #0
+    pop R1
+    pop R4
+    pop R3
+    pop R7
+    ret
+save .fill #0
+.blkw #64 
+nums .fill #-1
+.fill #-1
+.end
